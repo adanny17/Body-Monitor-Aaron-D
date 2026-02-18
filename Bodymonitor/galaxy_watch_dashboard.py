@@ -67,6 +67,7 @@ energy_score = [
 ]
 
 # Body Composition (slow change trend)
-body_fat = np.li_
+body_fat = np.linspace(18, 16.5, days) + np.random.normal(0, 0.3, days)
+muscle_mass = np.linspace(72, 74, days) + np.random.normal(0, 0.5, days)
 
 
