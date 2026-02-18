@@ -4,188 +4,69 @@ import plotly.express as px
 import numpy as np
 
 st.set_page_config(layout="wide")
-st.title("Galaxy Watch 8 Performance System (Demo Mode)")
+st.title("Galaxy Watch 8 Performance System (Realistic Simulation)")
 
 # ===============================
-# GENERATE RANDOM DATA
+# REALISTIC DATA GENERATION
 # ===============================
 
 np.random.seed(42)
-dates = pd.date_range(end=pd.Timestamp.today(), periods=30)
+days = 30
+dates = pd.date_range(end=pd.Timestamp.today(), periods=days)
 
-data = {}
+# Simulate weekly workout pattern
+workout_days = [i % 7 in [1, 3, 5] for i in range(days)]
 
-data["steps"] = pd.DataFrame({
-    "datetime": dates,
-    "steps": np.random.randint(4000, 15000, 30)
-})
+# Steps (higher on workout days)
+steps = []
+for i in range(days):
+    base = np.random.normal(7000, 1200)
+    if workout_days[i]:
+        base += np.random.normal(4000, 800)
+    steps.append(int(max(3000, base)))
 
-data["active_minutes"] = pd.DataFrame({
-    "datetime": dates,
-    "active_minutes": np.random.randint(30, 120, 30)
-})
+# Active Minutes
+active_minutes = [int(s / 120) for s in steps]
 
-data["calories"] = pd.DataFrame({
-    "datetime": dates,
-    "calories": np.random.randint(1800, 3500, 30)
-})
+# Calories (based on activity)
+calories = [int(1800 + s * 0.05 + np.random.normal(0, 150)) for s in steps]
 
-data["heart_rate"] = pd.DataFrame({
-    "datetime": dates,
-    "heart_rate": np.random.randint(55, 180, 30)
-})
+# Heart Rate (rest + workout spikes)
+heart_rate = []
+for i in range(days):
+    if workout_days[i]:
+        heart_rate.append(int(np.random.normal(145, 10)))
+    else:
+        heart_rate.append(int(np.random.normal(68, 5)))
 
-data["sleep"] = pd.DataFrame({
-    "datetime": dates,
-    "total_sleep_minutes": np.random.randint(300, 540, 30),
-    "deep_sleep": np.random.randint(60, 120, 30),
-    "rem_sleep": np.random.randint(60, 120, 30)
-})
+# Sleep (worse after workout days)
+total_sleep = []
+deep_sleep = []
+rem_sleep = []
 
-data["energy_score"] = pd.DataFrame({
-    "datetime": dates,
-    "energy_score": np.random.randint(40, 100, 30)
-})
+for i in range(days):
+    sleep_time = np.random.normal(420, 40)
+    if workout_days[i]:
+        sleep_time += 20  # better recovery sleep
+    total_sleep.append(int(max(300, sleep_time)))
+    deep_sleep.append(int(total_sleep[i] * np.random.uniform(0.18, 0.25)))
+    rem_sleep.append(int(total_sleep[i] * np.random.uniform(0.18, 0.22)))
 
-data["stress"] = pd.DataFrame({
-    "datetime": dates,
-    "stress_level": np.random.randint(10, 90, 30)
-})
+# Stress (higher on low sleep days)
+stress = []
+for i in range(days):
+    if total_sleep[i] < 380:
+        stress.append(int(np.random.normal(75, 5)))
+    else:
+        stress.append(int(np.random.normal(45, 10)))
 
-data["body_composition"] = pd.DataFrame({
-    "datetime": dates,
-    "body_fat_percent": np.random.uniform(10, 25, 30),
-    "muscle_mass": np.random.uniform(60, 90, 30)
-})
+# Energy score (sleep + stress dependent)
+energy_score = [
+    int(100 - (stress[i] * 0.5) + (total_sleep[i] - 400) * 0.1)
+    for i in range(days)
+]
 
-data["ecg"] = pd.DataFrame({
-    "datetime": dates,
-    "ecg_signal": np.random.normal(0, 1, 30)
-})
+# Body Composition (slow change trend)
+body_fat = np.li_
 
-data["blood_pressure"] = pd.DataFrame({
-    "datetime": dates,
-    "systolic": np.random.randint(105, 140, 30),
-    "diastolic": np.random.randint(65, 90, 30)
-})
-
-data["spo2"] = pd.DataFrame({
-    "datetime": dates,
-    "spo2": np.random.randint(94, 100, 30)
-})
-
-data["sleep_apnea"] = pd.DataFrame({
-    "datetime": dates,
-    "apnea_events": np.random.randint(0, 10, 30)
-})
-
-data["fall_detection"] = pd.DataFrame({
-    "datetime": dates,
-    "fall_detected": np.random.randint(0, 2, 30)
-})
-
-data["menstrual_cycle"] = pd.DataFrame({
-    "datetime": dates,
-    "cycle_day": np.random.randint(1, 28, 30)
-})
-
-data["antioxidant_index"] = pd.DataFrame({
-    "datetime": dates,
-    "carotenoids": np.random.uniform(2.0, 6.0, 30)
-})
-
-# ===============================
-# ROLE SELECTOR
-# ===============================
-
-role = st.sidebar.selectbox(
-    "Select Dashboard Role",
-    ["Coach", "Trainer", "Team Doctor", "Athlete"]
-)
-
-# ===============================
-# HELPER FUNCTIONS
-# ===============================
-
-def show_line_chart(df, y, title):
-    fig = px.line(df, x="datetime", y=y, title=title)
-    st.plotly_chart(fig, use_container_width=True)
-
-def show_bar_chart(df, y, title):
-    fig = px.bar(df, x="datetime", y=y, title=title)
-    st.plotly_chart(fig, use_container_width=True)
-
-def show_metric(label, value):
-    st.metric(label, round(float(value), 2))
-
-# ===============================
-# COACH DASHBOARD
-# ===============================
-
-if role == "Coach":
-    st.header("Coach Dashboard – Performance")
-
-    show_metric("Total Steps", data["steps"]["steps"].sum())
-    show_line_chart(data["steps"], "steps", "Steps Over Time")
-
-    show_metric("Active Minutes", data["active_minutes"]["active_minutes"].sum())
-    show_line_chart(data["active_minutes"], "active_minutes", "Active Minutes")
-
-    show_line_chart(data["heart_rate"], "heart_rate", "Heart Rate Trend")
-    show_bar_chart(data["sleep"], "total_sleep_minutes", "Sleep Duration")
-    show_line_chart(data["energy_score"], "energy_score", "Energy Score")
-
-# ===============================
-# TRAINER DASHBOARD
-# ===============================
-
-elif role == "Trainer":
-    st.header("Trainer Dashboard – Conditioning")
-
-    show_line_chart(data["body_composition"], "body_fat_percent", "Body Fat %")
-    show_line_chart(data["body_composition"], "muscle_mass", "Muscle Mass")
-    show_line_chart(data["calories"], "calories", "Calories Burned")
-    show_line_chart(data["stress"], "stress_level", "Stress Levels")
-    show_line_chart(data["sleep"], "deep_sleep", "Deep Sleep")
-    show_line_chart(data["sleep"], "rem_sleep", "REM Sleep")
-
-# ===============================
-# TEAM DOCTOR DASHBOARD
-# ===============================
-
-elif role == "Team Doctor":
-    st.header("Team Doctor Dashboard – Clinical Monitoring")
-
-    show_line_chart(data["ecg"], "ecg_signal", "ECG Signal")
-    show_line_chart(data["blood_pressure"], "systolic", "Systolic BP")
-    show_line_chart(data["blood_pressure"], "diastolic", "Diastolic BP")
-    show_line_chart(data["spo2"], "spo2", "Blood Oxygen (SpO2)")
-    show_bar_chart(data["sleep_apnea"], "apnea_events", "Sleep Apnea Events")
-    show_bar_chart(data["fall_detection"], "fall_detected", "Fall Events")
-    show_line_chart(data["menstrual_cycle"], "cycle_day", "Menstrual Cycle")
-    show_line_chart(data["antioxidant_index"], "carotenoids", "Antioxidant Index")
-
-# ===============================
-# ATHLETE DASHBOARD
-# ===============================
-
-elif role == "Athlete":
-    st.header("Athlete Dashboard – Daily Overview")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        show_metric("Steps", data["steps"]["steps"].sum())
-
-    with col2:
-        show_metric("Calories", data["calories"]["calories"].sum())
-
-    with col3:
-        show_metric("Active Minutes", data["active_minutes"]["active_minutes"].sum())
-
-    show_bar_chart(data["sleep"], "total_sleep_minutes", "Sleep Summary")
-    show_line_chart(data["stress"], "stress_level", "Stress Trend")
-    show_line_chart(data["energy_score"], "energy_score", "Energy Score")
-
-st.success("Demo Dashboard Loaded Successfully")
 
