@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 st.title("Galaxy Watch 8 Dashboard (Realistic Simulation)")
 
 # ===============================
-# SIMULATE REALISTIC DATA
+# REALISTIC DATA
 # ===============================
 
 np.random.seed(42)
@@ -15,43 +15,54 @@ days = 30
 dates = pd.date_range(end=pd.Timestamp.today(), periods=days)
 
 # Simulate weekly workout pattern (Mon/Wed/Fri)
-workout_days = [i % 7 in [1, 3, 5] for i in range(days)]
+workout_days = [i % 7 in [1,3,5] for i in range(days)]
 
-# Steps
-steps = [int(max(3000, np.random.normal(7000, 1200) + (4000 if workout_days[i] else 0))) for i in range(days)]
-active_minutes = [int(s / 120) for s in steps]
-calories = [int(1800 + s*0.05 + np.random.normal(0,150)) for s in steps]
+# Steps: realistic 5000–15000 per day
+steps = []
+for i in range(days):
+    base_steps = np.random.randint(5000, 10000)  # normal day
+    if workout_days[i]:
+        base_steps += np.random.randint(1000, 4000)  # workout day boost
+    steps.append(base_steps)
 
-# Heart Rate
-heart_rate = [int(np.random.normal(145,10) if workout_days[i] else np.random.normal(68,5)) for i in range(days)]
+active_minutes = [int(s / 100) for s in steps]  # 50–150 active minutes
+calories = [int(1800 + s*0.04 + np.random.normal(0,100)) for s in steps]  # realistic burn
+
+# Heart rate
+heart_rate = []
+for i in range(days):
+    if workout_days[i]:
+        heart_rate.append(int(np.random.normal(140,10)))
+    else:
+        heart_rate.append(int(np.random.normal(65,5)))
 
 # Sleep
 total_sleep = []
 deep_sleep = []
 rem_sleep = []
 for i in range(days):
-    sleep_time = np.random.normal(420,40)
+    sleep_time = np.random.normal(420,30)  # 7 hours average
     if workout_days[i]:
-        sleep_time += 20
+        sleep_time += 15  # recovery sleep
     total_sleep.append(int(max(300,sleep_time)))
     deep_sleep.append(int(total_sleep[i]*np.random.uniform(0.18,0.25)))
     rem_sleep.append(int(total_sleep[i]*np.random.uniform(0.18,0.22)))
 
-# Stress and Energy
-stress = [int(np.random.normal(75,5)) if total_sleep[i]<380 else int(np.random.normal(45,10)) for i in range(days)]
+# Stress & energy
+stress = [int(np.random.normal(70,5)) if total_sleep[i]<380 else int(np.random.normal(50,10)) for i in range(days)]
 energy_score = [int(100-(stress[i]*0.5)+(total_sleep[i]-400)*0.1) for i in range(days)]
 
-# Body Composition
-body_fat = np.linspace(18,16.5,days) + np.random.normal(0,0.3,days)
-muscle_mass = np.linspace(72,74,days) + np.random.normal(0,0.5,days)
+# Body composition
+body_fat = np.linspace(18,17,days) + np.random.normal(0,0.3,days)
+muscle_mass = np.linspace(72,73,days) + np.random.normal(0,0.5,days)
 
 # ECG, BP, SpO2, Apnea, Fall, Menstrual, Antioxidant
 ecg_signal = np.random.normal(0,0.5,days)
 ecg_signal[np.random.randint(0,days)] += 3  # rare spike
-systolic = np.random.normal(120,8,days)
+systolic = np.random.normal(120,7,days)
 diastolic = np.random.normal(78,5,days)
 spo2 = np.random.normal(97,1,days)
-apnea_events = np.random.poisson(2,days)
+apnea_events = np.random.poisson(1,days)
 fall_detected = np.random.choice([0,1], size=days, p=[0.95,0.05])
 cycle_day = [(i%28)+1 for i in range(days)]
 carotenoids = np.random.normal(4.5,0.6,days)
@@ -111,7 +122,7 @@ def show_metric(label, value):
 
 if role == "Coach":
     st.header("Coach Dashboard – Performance & Readiness")
-    show_metric("Total Steps", sum(steps))
+    show_metric("Total Steps (30 days)", sum(steps))
     show_line(data["steps"], "steps", "Steps Over Time")
     show_line(data["heart_rate"], "heart_rate", "Heart Rate Trend")
     show_line(data["energy_score"], "energy_score", "Energy Score")
@@ -148,5 +159,4 @@ elif role == "Athlete":
     show_line(data["energy_score"], "energy_score", "Energy Score")
 
 st.success("Dashboard Loaded Successfully ✅")
-
 
